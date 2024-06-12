@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  producer:
+    container_name: producer-container
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
+    depends_on:
+      - redis
+    networks:
+      - redis-network
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  consumer:
+    container_name: consumer-container
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    depends_on:
+      - redis
+    networks:
+      - redis-network
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  redis:
+    container_name: 'redis-container'
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    networks:
+      - redis-network
+
+networks:
+  redis-network:
+    driver: bridge
