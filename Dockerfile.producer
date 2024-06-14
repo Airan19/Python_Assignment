@@ -4,8 +4,8 @@ WORKDIR /app
 
 COPY producer.py .
 COPY requirements.txt .
-COPY employee_data.json .
+COPY app.py .
 
 RUN pip install -r requirements.txt
 
-CMD ["python", "producer.py"]
+# CMD ["python", "producer.py"]

@@ -1,8 +1,28 @@
 import redis
 import time
+import json
+from db import DatabaseManager
+from dotenv import load_dotenv
+from os import getenv
+from redis.commands.json.path import Path
+
+
+load_dotenv('env')
+
+#Database Configuration
+DB_NAME = getenv('DB_NAME')
+DB_USER = getenv('DB_USER')
+DB_PASSWORD = getenv('DB_PASSWORD')
+DB_SERVER = getenv('DB_SERVER')
+DB_PORT = getenv('DB_PORT')
+DB_MASTER = getenv('DB_MASTER')
+
+REDIS_HOST = getenv('REDIS_HOST', 'redis-container')
+REDIS_PORT = int(getenv('REDIS_PORT', 6379))
+
 
 # Connecting to Redis
-r_conn = redis.Redis(host='redis', port=6379, db=0)
+r_conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
 # Enable Key Space Notifications for the 'employee' key
 r_conn.config_set('notify-keyspace-events', 'KEA')
@@ -11,31 +31,76 @@ r_conn.config_set('notify-keyspace-events', 'KEA')
 pubsub = r_conn.pubsub()
 
 # Subscribe to keyspace notifications for 'employee' key in database 0
-pubsub.psubscribe('__keyspace@0__:employee:*')
+pubsub.psubscribe('__keyspace@0__:employee/*')
+
+
+# Database connection
+# db_manager = DatabaseManager(server=)
+
+print(DB_NAME, DB_MASTER, DB_PASSWORD, DB_PORT, DB_SERVER)
+def execute_sql_query(query, params=None, fetchone=False, fetchall=False):
+    with DatabaseManager(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, 
+                         database=DB_NAME, main_db=DB_MASTER, port=DB_PORT) as sql_db:
+        output = sql_db.execute_query(query, params,fetchone, fetchall)
+        return output
+    
 
 print("----------------CONSUMER--------------------")
 
 def log_change(event, key, data):
     with open('employee_log.txt', 'a') as log_file:
         log_file.write(f"{time.ctime()}: {event} - Key: {key}  Data: {data} \n")
-    
+
+
+def handle_set_action(key):
+    print(key)
+    data = r_conn.get(f"employee/{key}")
+    data = data.decode('utf-8') if isinstance(data, bytes) else print(type(data))
+    print(data, type(data))
+    if isinstance(data, str):
+        data = json.loads(r_conn.get(f"employee/{key}"))
+    if data:
+        query = """
+        IF EXISTS (SELECT 1 FROM Employees WHERE emp_id=%s)
+        UPDATE Employees
+        SET name=%s, gender=%s, phone=%s, department=%s, date_of_birth=%s, email=%s, experience=%s
+        WHERE emp_id=%s
+        ELSE
+        INSERT INTO Employees (emp_id, name, gender, phone, department, date_of_birth, email, experience)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        params = (
+            data["emp_id"], data['name'], data['gender'], data['phone'], data['department'],
+            data['date_of_birth'], data['email'], data['experience'], data['emp_id'], data['emp_id'],
+            data['name'], data['gender'], data['phone'], data['department'],
+            data['date_of_birth'], data['email'], data['experience']
+        ) 
+        res = execute_sql_query(query, params)
+        print('res', res)
+
+
+def handle_delete_action(key):
+    employee_id = int(key)
+    query = "DELETE FROM Employees WHERE id=%s"
+    params = (employee_id)
+    res = execute_sql_query(query, params)
+    print('res', res)
+
+
 # Listen for messages
 for message in pubsub.listen():
     try:
         # Key event notification
         if message['type'] == 'pmessage':
+            print(message)
             event = message['data'].decode('utf-8') if isinstance(message['data'], bytes) else str(message['data'])
-            key = message['channel'].decode('utf-8').split(':')[-1]
-            # if event in ['json.set', 'del']:
-                # old_data = r_conn.json().get(f"employee:{key}")
-                # old_data = json.dumps(old_data) if old_data else 'None'
-
-                # if event == 'json.set':
-                #     new_data = r_conn.json().get(f"employee:{key}")
-                #     new_data = json.dumps(new_data) if new_data else 'None'
-                # else:
-                #     new_data = 'Deleted'
-            data = r_conn.json().get(f"employee:{key}")
+            key = message['channel'].decode('utf-8').split('/')[-1]
+            print(event)
+            if event == 'set':
+                handle_set_action(key)
+            elif event == 'del':
+                handle_delete_action(key)
+            data = r_conn.get(f"employee/{key}")
 
             log_change(event, key, data)
             print(f"Logged change: {event} - Key: {key}  Data: {data}")
