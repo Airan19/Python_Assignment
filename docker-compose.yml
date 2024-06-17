@@ -3,9 +3,9 @@ version: '3'
 services:
 
   redis:
-    container_name: 'redis-container'
     # image: redis/redis-stack:latest
     image: redis:latest
+    container_name: redis-container
     ports:
       - "6379:6379"
       # - "8001:8001"
