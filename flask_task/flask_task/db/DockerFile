@@ -1,0 +1,22 @@
+FROM mcr.microsoft.com/mssql/server:2022-latest
+
+# Create app directory
+WORKDIR /usr/src/app
+
+# Copy initialization scripts
+COPY . /usr/src/app
+
+# Copy the SQL script into the container
+# COPY create-database.sql /docker-entrypoint-initdb.d/create-database.sql
+
+# Set environment variables, not have to write them with the docker run command
+ARG SA_PASSWORD
+ENV SA_PASSWORD=$SA_PASSWORD
+ENV ACCEPT_EULA Y
+ENV MSSQL_PID Express
+
+# # Expose port 1433 in case accessing from other container
+EXPOSE 1434
+
+# Run Microsoft SQL Server and initialization script (at the same time)
+# CMD /bin/bash ./entrypoint.sh
