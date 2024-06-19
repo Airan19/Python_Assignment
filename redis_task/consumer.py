@@ -2,61 +2,51 @@ import redis
 import time
 import json
 from db import DatabaseManager
-from dotenv import load_dotenv
-from os import getenv
-from redis.commands.json.path import Path
+from config import get_configs
+from flask import current_app as app
 
 
-load_dotenv('env')
-
-#Database Configuration
-DB_NAME = getenv('DB_NAME')
-DB_USER = getenv('DB_USER')
-DB_PASSWORD = getenv('DB_PASSWORD')
-DB_SERVER = getenv('DB_SERVER')
-DB_PORT = getenv('DB_PORT')
-DB_MASTER = getenv('DB_MASTER')
-
-REDIS_HOST = getenv('REDIS_HOST', 'redis-container')
-REDIS_PORT = int(getenv('REDIS_PORT', 6379))
+def configure_database():
+    configs = get_configs(app)
+    DB_NAME = configs.get('DB_NAME')
+    DB_USER = configs.get('DB_USER')
+    DB_PASSWORD = configs.get('DB_PASSWORD')
+    DB_SERVER = configs.get('DB_SERVER')
+    DB_PORT = configs.get('DB_PORT')
+    DB_MASTER = configs.get('DB_MASTER')
+    return DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_MASTER
 
 
-# Connecting to Redis
-r_conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+def create_redis_connection():
+    configs = get_configs(app)
+    REDIS_HOST = configs.get('REDIS_HOST', 'redis-container')
+    REDIS_PORT = int(configs.get('REDIS_PORT', 6379))
 
-# Enable Key Space Notifications for the 'employee' key
-r_conn.config_set('notify-keyspace-events', 'KEA')
+    r_conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+    r_conn.config_set('notify-keyspace-events', 'KEA')
+    pubsub = r_conn.pubsub()
+    pubsub.psubscribe('__keyspace@0__:employee/*')
 
-# Create a pubsub object
-pubsub = r_conn.pubsub()
-
-# Subscribe to keyspace notifications for 'employee' key in database 0
-pubsub.psubscribe('__keyspace@0__:employee/*')
+    return r_conn, pubsub
 
 
-# Database connection
-# db_manager = DatabaseManager(server=)
-
-print(DB_NAME, DB_MASTER, DB_PASSWORD, DB_PORT, DB_SERVER)
 def execute_sql_query(query, params=None, fetchone=False, fetchall=False):
+    DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_MASTER = configure_database()
     with DatabaseManager(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, 
                          database=DB_NAME, main_db=DB_MASTER, port=DB_PORT) as sql_db:
-        output = sql_db.execute_query(query, params,fetchone, fetchall)
+        output = sql_db.execute_query(query, params, fetchone, fetchall)
         return output
-    
 
-print("----------------CONSUMER--------------------")
 
 def log_change(event, key, data):
     with open('employee_log.txt', 'a') as log_file:
         log_file.write(f"{time.ctime()}: {event} - Key: {key}  Data: {data} \n")
 
 
-def handle_set_action(key):
-    print(key)
+def handle_set_action(r_conn, key):
     data = r_conn.get(f"employee/{key}")
     data = data.decode('utf-8') if isinstance(data, bytes) else print(type(data))
-    print(data, type(data))
+    # print(data, type(data))
     if isinstance(data, str):
         data = json.loads(r_conn.get(f"employee/{key}"))
     if data:
@@ -87,22 +77,25 @@ def handle_delete_action(key):
     print('res', res)
 
 
-# Listen for messages
-for message in pubsub.listen():
-    try:
-        # Key event notification
-        if message['type'] == 'pmessage':
-            print(message)
-            event = message['data'].decode('utf-8') if isinstance(message['data'], bytes) else str(message['data'])
-            key = message['channel'].decode('utf-8').split('/')[-1]
-            print(event)
-            if event == 'set':
-                handle_set_action(key)
-            elif event == 'del':
-                handle_delete_action(key)
-            data = r_conn.get(f"employee/{key}")
+def listen_for_messages():
+    r_conn, pubsub = create_redis_connection()
+    for message in pubsub.listen():
+        try:
+            if message['type'] == 'pmessage':
+                event = message['data'].decode('utf-8') if isinstance(message['data'], bytes) else str(message['data'])
+                key = message['channel'].decode('utf-8').split('/')[-1]
+                if event == 'set':
+                    handle_set_action(r_conn, key)
+                elif event == 'del':
+                    handle_delete_action(key)
+                data = r_conn.get(f"employee/{key}")
 
-            log_change(event, key, data)
-            print(f"Logged change: {event} - Key: {key}  Data: {data}")
-    except Exception as e:
-        print(f"Error processing message: {e}")
+                log_change(event, key, data)
+                print(f"Logged change: {event} - Key: {key}  Data: {data}")
+        except Exception as e:
+            print(f"Error processing message: {e}")
+
+
+if __name__ == "__main__":
+    print("----------------CONSUMER--------------------")
+    listen_for_messages()

@@ -2,33 +2,23 @@ import json
 import redis
 from os import getenv
 from flask import jsonify, Blueprint, request, current_app as app
+from config import get_configs
 
 redis_api_bp = Blueprint('redis_api', __name__)
-
-# Load environment variables
-REDIS_HOST = getenv('REDIS_HOST', 'redis-container')
-REDIS_PORT = int(getenv('REDIS_PORT', 6379))
-
-# Creating a connection with Redis
-r_conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
-
-# # Open the employee data file
-# with open('employee_data.json') as f:
-#     employee_data = json.load(f)
-
-# for data in employee_data:
-#     # Update the JSON object with the new employee data
-#     employee_key = f"employee:{data['id']}"
-#     # employee = json.dumps(data)
-#     r_conn.json().set(employee_key, Path.root_path(), data)
-#     print(f'Produced {data}')
-#     time.sleep(5)
-
-# print('JSON Get Key 1', r_conn.json().get("employee:1"))
-# time.sleep(5)
-# print('Deleting Key 2', bool(r_conn.json().delete("employee:2")))
-
 print('-----------------------PRODUCER-----------------')
+
+
+def create_redis_connection():
+    configs = get_configs(app)
+    REDIS_HOST = configs.get('REDIS_HOST', 'redis-container')
+    REDIS_PORT = int(configs.get('REDIS_PORT', 6379))
+
+    r_conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+    return r_conn
+
+
+r_conn = create_redis_connection()
+
 
 @redis_api_bp.route('/create', methods=['POST'])
 def create_employee():  
@@ -49,15 +39,15 @@ def update_employee(emp_id):
     # try:
     employee_key = f"employee/{emp_id}"
     if data['emp_id'] != emp_id:
-        return jsonify({'message': 'Cannot change emp_id'})
+        return jsonify({'message': "Cannot change emp_id"})
     
     curr_data = r_conn.get(employee_key)
     if  curr_data == None:
         return jsonify({'message': f'Employee with emp_id:{emp_id}, does not exists.'})
     
     curr_data_json = json.loads(r_conn.get(employee_key))
-    if curr_data_json['email'] == data['email']:
-        return jsonify({'message': f"Employee with email :{data['email']}, already exists."})
+    if curr_data_json['email'] != data['email']:
+        return jsonify({'message': "Cannot change email"})
 
     r_conn.set(employee_key, (json.dumps(data)))
     return jsonify({'message': f'Emoloyee with id:{emp_id}, updated successfully'})
