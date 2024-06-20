@@ -46,7 +46,6 @@ def log_change(event, key, data):
 def handle_set_action(r_conn, key):
     data = r_conn.get(f"employee/{key}")
     data = data.decode('utf-8') if isinstance(data, bytes) else print(type(data))
-    # print(data, type(data))
     if isinstance(data, str):
         data = json.loads(r_conn.get(f"employee/{key}"))
     if data:
@@ -65,17 +64,15 @@ def handle_set_action(r_conn, key):
             data['name'], data['gender'], data['phone'], data['department'],
             data['date_of_birth'], data['email'], data['experience']
         ) 
-        res = execute_sql_query(query, params)
-        print('res', res)
-
+        execute_sql_query(query, params)
+    
 
 def handle_delete_action(key):
     employee_id = int(key)
     query = "DELETE FROM Employees WHERE id=%s"
     params = (employee_id)
-    res = execute_sql_query(query, params)
-    print('res', res)
-
+    execute_sql_query(query, params)
+    
 
 def listen_for_messages():
     r_conn, pubsub = create_redis_connection()

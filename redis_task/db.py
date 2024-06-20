@@ -72,7 +72,7 @@ class DatabaseManager:
                             emp_id INT PRIMARY KEY NOT NULL,
                             name VARCHAR(100) NOT NULL,
                             gender VARCHAR(10) NOT NULL,
-                            phone VARCHAR(10),
+                            phone INT,
                             department VARCHAR(100) NOT NULL,
                             date_of_birth DATE,
                             email VARCHAR(255) UNIQUE,

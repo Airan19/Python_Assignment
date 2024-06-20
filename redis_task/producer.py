@@ -26,7 +26,7 @@ def create_employee():
     try:
         employee_key = f"employee/{data['emp_id']}"
         if r_conn.get(employee_key) != None:
-            return jsonify({'message': f"Employee with emp_id: {data['emp_id']} already exists."})
+            return jsonify({'message': f"Employee with emp_id: {data['emp_id']} already exists."}), 409
         r_conn.set(employee_key, (json.dumps(data)))
         return jsonify({'message': 'Employee created successfully'}), 201
     except Exception as e:
@@ -36,23 +36,29 @@ def create_employee():
 @redis_api_bp.route('/update/<int:emp_id>', methods=['PUT'])
 def update_employee(emp_id):
     data = request.get_json()
-    # try:
-    employee_key = f"employee/{emp_id}"
-    if data['emp_id'] != emp_id:
-        return jsonify({'message': "Cannot change emp_id"})
-    
-    curr_data = r_conn.get(employee_key)
-    if  curr_data == None:
-        return jsonify({'message': f'Employee with emp_id:{emp_id}, does not exists.'})
-    
-    curr_data_json = json.loads(r_conn.get(employee_key))
-    if curr_data_json['email'] != data['email']:
-        return jsonify({'message': "Cannot change email"})
+    try:
+        employee_key = f"employee/{emp_id}"
+        curr_data = r_conn.get(employee_key)
+        if  curr_data == None:
+            return jsonify({'message': f'Employee with emp_id:{emp_id}, does not exists.'}), 404
+        
+        if data['emp_id'] != emp_id:
+            return jsonify({'message': "Cannot change emp_id"}), 400
+        
+        curr_data_json = json.loads(r_conn.get(employee_key))
+        if curr_data_json['email'] != data['email']:
+            return jsonify({'message': "Cannot change email"}), 400 
+        
+        # Check for changes in the data
+        is_changed = any(curr_data_json.get(field) != data.get(field) for field in data if field != 'emp_id')
+        if not is_changed:
+            return jsonify({'message': 'No changes detected'}), 200
 
-    r_conn.set(employee_key, (json.dumps(data)))
-    return jsonify({'message': f'Emoloyee with id:{emp_id}, updated successfully'})
-    # except Exception as e:
-    #     return jsonify({"error": str(e)}), 500
+        r_conn.set(employee_key, (json.dumps(data)))
+        return jsonify({'message': f'Emoloyee with id:{emp_id}, updated successfully'}), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 
 @redis_api_bp.route('/delete/<int:emp_id>', methods=['DELETE'])
@@ -60,9 +66,9 @@ def delete_employee(emp_id):
     try:
         employee_key = f"employee/{emp_id}"
         if r_conn.get(employee_key) == None:
-            return jsonify({'message': f'Employee with emp_id:{emp_id}, does not exists.'})
+            return jsonify({'message': f'Employee with emp_id:{emp_id}, does not exists.'}), 404
         r_conn.delete(employee_key)
-        return jsonify({'message': f'Employee with emp_id:{emp_id}, deleted successfully'})
+        return jsonify({'message': f'Employee with emp_id:{emp_id}, deleted successfully'}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
