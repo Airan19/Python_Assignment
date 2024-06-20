@@ -17,7 +17,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: mssql-container
     env_file:
-      - ../environ_file
+      - ./env_variables
     ports:
       - "1433:1433"
     networks:
@@ -31,7 +31,7 @@ services:
       dockerfile: Dockerfile.producer
     command: python -u app.py
     env_file:
-      - ../environ_file
+      - ./env_variables
     depends_on:
       - redis
     networks:
@@ -45,7 +45,7 @@ services:
       dockerfile: Dockerfile.consumer
     command: python -u consumer.py
     env_file:
-      - ../environ_file
+      - ./env_variables
     depends_on:
       - redis
       - mssql
