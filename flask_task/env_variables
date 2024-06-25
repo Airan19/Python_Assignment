@@ -1,0 +1,9 @@
+#Database Configuration
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+DB_SERVER=mssql-db
+DB_PORT=1433
+DB_MASTER=master
+ACCEPT_EULA=Y
+SA_PASSWORD=

@@ -1,8 +1,9 @@
+import requests
+import time
+import config
 from flask import jsonify, request, current_app as app, Blueprint
 from main import scheduler
 from db import DatabaseManager
-import requests
-import config
 from logger import Logger
 
 web_api_bp = Blueprint('web_api', __name__)
@@ -25,7 +26,10 @@ def execute_sql_query(query, params=None, fetchone=False, fetchall=False):
 def check_status(url):
     new_status = 'DOWN'
     try:
-        response = requests.get('https://' + url).status_code
+        if 'http' not in url:
+            response = requests.get('https://' + url).status_code
+        else:
+            response = requests.get(url).status_code
         if 200 <= response < 300 :
             new_status = 'UP'
     except Exception as e:

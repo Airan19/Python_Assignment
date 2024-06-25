@@ -9,23 +9,20 @@ services:
     container_name: flask-app
     ports:
       - "5000:5000"
-    environment:
-      DB_SERVER: db
-      DB_PORT: ${DB_PORT}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-    # depends_on:
-    #   - db
+    env_file:
+      - ./env_variables
+    command: "python -u main.py"
+    depends_on:
+      - db
     restart: always
 
 
   db:
     build: 
       context: ./db
-      args:
-        SA_PASSWORD: ${DB_PASSWORD}
       dockerfile: DockerFile
     container_name: mssql-db
+    env_file:
+      - ./env_variables
     ports:
         - 1434:1434

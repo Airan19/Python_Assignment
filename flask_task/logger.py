@@ -10,6 +10,7 @@ class Logger:
     ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+    
     fh = logging.FileHandler('file.log')
     fh.setLevel(logging.ERROR)
     formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

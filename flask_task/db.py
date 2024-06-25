@@ -30,25 +30,26 @@ class DatabaseManager:
                 password=self.password,
                 database=db
             )
-
-            self.log.info(f"Connected to SQL Server ({self.server}), ({self.database})")
+            return True
+            # self.log.info(f"Connected to SQL Server ({self.server}), ({self.database})")
 
         except pymssql.Error as e:
             self.log.error(f"Error connecting to SQL Server, please check the docker container: {e}")
             self.create_database_if_not_exists()
+            return False
 
 
     def create_database_if_not_exists(self):
         try:
-            self.connect('master')
+            self.connect(self.main_db)
             self._conn.autocommit(True)
             cursor = self._conn.cursor()
-            cursor.execute("CREATE DATABASE WebsitesDB")
+            cursor.execute(f"CREATE DATABASE {self.database}")
             self._conn.autocommit(False)
             self.log.info(f"Database 'WebsitesDB' created successfully.")
         
             # Switch to WebsitesDB
-            cursor.execute("USE WebsitesDB")
+            cursor.execute(f"USE {self.database}")
             self.create_table_if_not_exists()
             
         except pymssql.Error as e:
