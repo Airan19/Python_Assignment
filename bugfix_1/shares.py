@@ -2,4 +2,4 @@ from datetime import datetime
 
 def get_summary(fund_code, ts=datetime.now().strftime('%Y-%m-%d %H:%M:%S')):
     # Assume below line is writing data to DB
-    print(f"SHARS -> {fund_code} is Loaded at time : {ts}")
+    print(f"SHARES -> {fund_code} is Loaded at time : {ts}")
