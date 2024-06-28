@@ -1,5 +1,4 @@
 import redis
-import time
 import json
 import os
 from logger import Logger as log
@@ -69,18 +68,17 @@ def handle_set_action(r_conn, key):
         # SQL query to update or insert the employee record
         table_name = os.getenv('DB_TABLE_NAME')
         query = f"""
-        IF EXISTS (SELECT 1 FROM %s WHERE emp_id=%s)
-        UPDATE %s
+        IF EXISTS (SELECT 1 FROM {table_name} WHERE emp_id=%s)
+        UPDATE {table_name}
         SET name=%s, gender=%s, phone=%s, department=%s, date_of_birth=%s, email=%s, experience=%s
         WHERE emp_id=%s
         ELSE
-        INSERT INTO %s (emp_id, name, gender, phone, department, date_of_birth, email, experience)
+        INSERT INTO {table_name} (emp_id, name, gender, phone, department, date_of_birth, email, experience)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         params = (
-            table_name,
-            data["emp_id"], table_name, data['name'], data['gender'], data['phone'], data['department'],
-            data['date_of_birth'], data['email'], data['experience'], data['emp_id'], table_name, data['emp_id'],
+            data["emp_id"], data['name'], data['gender'], data['phone'], data['department'],
+            data['date_of_birth'], data['email'], data['experience'], data['emp_id'], data['emp_id'],
             data['name'], data['gender'], data['phone'], data['department'],
             data['date_of_birth'], data['email'], data['experience']
         ) 

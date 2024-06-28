@@ -41,7 +41,7 @@ class DatabaseManager:
     def create_table_if_not_exists(self):
         try:
             cursor = self._conn.cursor()
-            cursor.execute(f"SELECT COUNT(*) FROM sys.tables WHERE name = {self.table_name}")
+            cursor.execute(f"SELECT COUNT(*) FROM sys.tables WHERE name = %s", (self.table_name))
             exists = cursor.fetchone()[0]
             if not exists:
                 # Create employees table
@@ -57,6 +57,7 @@ class DatabaseManager:
                             experience INT
                 )""")
                 self.log.info(f"Table '{self.table_name}' created successfully.")
+                self._conn.commit()
             else:
                 self.log.info(f"Table '{self.table_name}' already exists.")
             
