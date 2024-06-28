@@ -19,9 +19,8 @@ def configure_database():
     DB_USER = os.getenv('DB_USER')
     DB_PASSWORD = os.getenv('DB_PASSWORD')
     DB_SERVER = os.getenv('DB_SERVER')
-    DB_PORT = os.getenv('DB_PORT', 1433)
     DB_TABLE_NAME = os.getenv('DB_TABLE_NAME')
-    return DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_TABLE_NAME
+    return DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_TABLE_NAME
 
 
 # Creates a connection with redis
@@ -48,13 +47,11 @@ def execute_sql_query(query, params=None, fetchone=False, fetchall=False):
     """
     Execute an SQL query using the provided parameters and fetch options.
     """
-    print('inside consumer execute_sql_query')
-    DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_TABLE_NAME = configure_database()
+    DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_TABLE_NAME = configure_database()
     
     # Execute the query using DatabaseManager context
     with DatabaseManager(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, 
-                         database=DB_NAME, port=DB_PORT, table_name=DB_TABLE_NAME) as sql_db:
-        print('inside consumer DBMS')
+                         database=DB_NAME, table_name=DB_TABLE_NAME) as sql_db:
         output = sql_db.execute_query(query, params, fetchone, fetchall)
         return output
 

@@ -3,13 +3,12 @@ import pymssql
 
 class DatabaseManager:
 
-    def __init__(self, server, user, password, database, table_name, port, log_name='sql'):
+    def __init__(self, server, user, password, database, table_name, log_name='sql'):
         self.server = server
         self.user = user
         self.password = password
         self.database = database
         self.table_name = table_name
-        self.port = port
         self.log = logger.Logger()
         self._conn = None
 
@@ -24,18 +23,15 @@ class DatabaseManager:
 
 
     def connect(self, db):
-        print("--------con---------nec-----------ting------", self.server)
         try:
             self._conn = pymssql.connect(
                 server=self.server,
                 user=self.user,
                 password=self.password,
                 database=db,
-                port=self.port
             )
 
             self.log.info(f"Connected to SQL Server ({self.server}), ({self.database})")
-            print(self._conn)
             self.create_table_if_not_exists()
             
         except pymssql.Error as e:
