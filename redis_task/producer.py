@@ -2,7 +2,9 @@ import json
 import redis
 from os import getenv
 from flask import jsonify, Blueprint, request, current_app as app
-from config import get_configs
+from dotenv import load_dotenv
+
+load_dotenv('./env_variables')
 
 # Define a Blueprint for the Redis API routes
 redis_api_bp = Blueprint('redis_api', __name__)
@@ -13,12 +15,12 @@ def create_redis_connection():
     """
     Create a connection to the Redis server using configuration from the Flask app.
     """
-    configs = get_configs(app)
-    REDIS_HOST = configs.get('REDIS_HOST', 'redis-container')
-    REDIS_PORT = int(configs.get('REDIS_PORT', 6379))
+    REDIS_HOST = getenv('REDIS_HOST', 'redis-container')
+    REDIS_PORT = int(getenv('REDIS_PORT', 6379))
     
      # Establish connection to Redis
     r_conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+    print(f'Connected to host {REDIS_HOST} on port {REDIS_PORT}')
     return r_conn
 
 

@@ -1,11 +1,7 @@
 from flask import Flask
-from config import Config, get_configs
 
-def create_app(config_class):
+def create_app():
     app = Flask(__name__)
-
-    # Load configuration from the provided config class
-    app.config.from_object(config_class)
 
     with app.app_context():
         # Import and register the Blueprint for the Redis API routes
@@ -14,9 +10,10 @@ def create_app(config_class):
 
     return app
 
+
 if __name__ == "__main__":
     # Create an instance of the Flask app with the specified configuration
-    app = create_app(Config)
+    app = create_app()
     
     # Run the Flask app on the specified host and port with debugging enabled
     app.run(host='0.0.0.0', port='5000', debug=True)
