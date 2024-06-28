@@ -1,32 +1,36 @@
 import redis
 import time
 import json
+import os
 from db import DatabaseManager
-from config import get_configs
-from flask import current_app as app
+from dotenv import load_dotenv
 
 
+# Load the 'env_variables' file where the envrionment variables are present
+load_dotenv('./env_variables')
+
+
+# Configure database credentials by retrieving required varaibles from env_variables file
 def configure_database():
     """
     Retrieve database configuration from the app's environment variables.
     """
-    configs = get_configs(app)
-    DB_NAME = configs.get('DB_NAME')
-    DB_USER = configs.get('DB_USER')
-    DB_PASSWORD = configs.get('DB_PASSWORD')
-    DB_SERVER = configs.get('DB_SERVER')
-    DB_PORT = configs.get('DB_PORT')
-    DB_MASTER = configs.get('DB_MASTER')
-    return DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_MASTER
+    DB_NAME = os.getenv('DB_NAME')
+    DB_USER = os.getenv('DB_USER')
+    DB_PASSWORD = os.getenv('DB_PASSWORD')
+    DB_SERVER = os.getenv('DB_SERVER')
+    DB_PORT = os.getenv('DB_PORT', 1433)
+    DB_TABLE_NAME = os.getenv('DB_TABLE_NAME')
+    return DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_TABLE_NAME
 
 
+# Creates a connection with redis
 def create_redis_connection():
     """
     Create and configure a connection to Redis and subscribe to keyspace notifications.
     """
-    configs = get_configs(app)
-    REDIS_HOST = configs.get('REDIS_HOST', 'redis-container')
-    REDIS_PORT = int(configs.get('REDIS_PORT', 6379))
+    REDIS_HOST = os.getenv('REDIS_HOST', 'redis-container')
+    REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 
     r_conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
     
@@ -44,11 +48,13 @@ def execute_sql_query(query, params=None, fetchone=False, fetchall=False):
     """
     Execute an SQL query using the provided parameters and fetch options.
     """
-    DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_MASTER = configure_database()
+    print('inside consumer execute_sql_query')
+    DB_NAME, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT, DB_TABLE_NAME = configure_database()
     
     # Execute the query using DatabaseManager context
     with DatabaseManager(server=DB_SERVER, user=DB_USER, password=DB_PASSWORD, 
-                         database=DB_NAME, main_db=DB_MASTER, port=DB_PORT) as sql_db:
+                         database=DB_NAME, port=DB_PORT, table_name=DB_TABLE_NAME) as sql_db:
+        print('inside consumer DBMS')
         output = sql_db.execute_query(query, params, fetchone, fetchall)
         return output
 
@@ -72,8 +78,9 @@ def handle_set_action(r_conn, key):
         data = json.loads(r_conn.get(f"employee/{key}"))
     if data:
         # SQL query to update or insert the employee record
-        query = """
-        IF EXISTS (SELECT 1 FROM Employees WHERE emp_id=%s)
+        table_name = os.getenv('DB_TABLE_NAME')
+        query = f"""
+        IF EXISTS (SELECT 1 FROM %s WHERE emp_id=%s)
         UPDATE Employees
         SET name=%s, gender=%s, phone=%s, department=%s, date_of_birth=%s, email=%s, experience=%s
         WHERE emp_id=%s
@@ -82,6 +89,7 @@ def handle_set_action(r_conn, key):
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         params = (
+            table_name,
             data["emp_id"], data['name'], data['gender'], data['phone'], data['department'],
             data['date_of_birth'], data['email'], data['experience'], data['emp_id'], data['emp_id'],
             data['name'], data['gender'], data['phone'], data['department'],
@@ -133,4 +141,5 @@ def listen_for_messages():
 
 if __name__ == "__main__":
     print("----------------CONSUMER--------------------")
+    print(configure_database())
     listen_for_messages()

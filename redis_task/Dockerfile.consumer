@@ -6,9 +6,5 @@ COPY consumer.py .
 COPY requirements.txt .
 COPY db.py .
 COPY logger.py .
-COPY config.py .
-
 
 RUN pip install -r requirements.txt
-
-# CMD ["python", "consumer.py"]

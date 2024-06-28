@@ -7,35 +7,6 @@ services:
     container_name: redis-container
     ports:
       - "6379:6379"
-    networks:
-      - redis-network
-
-
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: mssql-container
-    env_file:
-      - ./env_variables
-    ports:
-      - "1433:1433"
-    networks:
-      - redis-network
-
-
-  producer:
-    container_name: producer-container
-    build:
-      context: .
-      dockerfile: Dockerfile.producer
-    command: python -u app.py
-    env_file:
-      - ./env_variables
-    ports:
-      - "5000:5000"
-    depends_on:
-      - redis
-    networks:
-      - redis-network
 
 
   consumer:
@@ -48,9 +19,3 @@ services:
       - ./env_variables
     depends_on:
       - redis
-      - mssql
-    networks:
-      - redis-network
-
-networks:
-  redis-network:

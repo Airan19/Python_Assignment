@@ -3,12 +3,12 @@ import pymssql
 
 class DatabaseManager:
 
-    def __init__(self, server, user, password, database, main_db, port, log_name='sql'):
+    def __init__(self, server, user, password, database, table_name, port, log_name='sql'):
         self.server = server
         self.user = user
         self.password = password
         self.database = database
-        self.main_db = main_db
+        self.table_name = table_name
         self.port = port
         self.log = logger.Logger()
         self._conn = None
@@ -24,6 +24,7 @@ class DatabaseManager:
 
 
     def connect(self, db):
+        print("--------con---------nec-----------ting------", self.server)
         try:
             self._conn = pymssql.connect(
                 server=self.server,
@@ -34,40 +35,21 @@ class DatabaseManager:
             )
 
             self.log.info(f"Connected to SQL Server ({self.server}), ({self.database})")
+            print(self._conn)
             self.create_table_if_not_exists()
             
         except pymssql.Error as e:
             self.log.error(f"Error connecting to SQL Server, please check the docker container: {e}")
-            self.create_database_if_not_exists()
-
-
-    def create_database_if_not_exists(self):
-        try:
-            self.connect(self.main_db)
-            self._conn.autocommit(True)
-            cursor = self._conn.cursor()
-            cursor.execute(f"CREATE DATABASE {self.database}")
-            self._conn.autocommit(False)
-            self.log.info(f"Database '{self.database}' created successfully.")
-           
-            # Switch to WebsitesDB
-            cursor.execute(f"USE {self.database}")
-            self.create_table_if_not_exists()
             
-        except pymssql.Error as e:
-            self.log.error(f"Error creating database {e}")
-            self.log.info('Please check the mssqsl server is running on docker or not.')
-
-
 
     def create_table_if_not_exists(self):
         try:
             cursor = self._conn.cursor()
-            cursor.execute(f"SELECT COUNT(*) FROM sys.tables WHERE name = 'Employees'")
+            cursor.execute(f"SELECT COUNT(*) FROM sys.tables WHERE name = {self.table_name}")
             exists = cursor.fetchone()[0]
             if not exists:
                 # Create employees table
-                cursor.execute("""CREATE TABLE Employees(
+                cursor.execute(f"""CREATE TABLE {self.table_name}(
                             id INT IDENTITY(1,1),
                             emp_id INT PRIMARY KEY NOT NULL,
                             name VARCHAR(100) NOT NULL,
@@ -78,12 +60,12 @@ class DatabaseManager:
                             email VARCHAR(255) UNIQUE,
                             experience INT
                 )""")
-                self.log.info("Table 'Employees' created successfully.")
+                self.log.info(f"Table '{self.table_name}' created successfully.")
             else:
-                self.log.info("Table 'Employees' already exists.")
+                self.log.info(f"Table '{self.table_name}' already exists.")
             
         except pymssql.Error as e:
-            self.log.error(f"Error creating table 'Employees': {e}")
+            self.log.error(f"Error creating table '{self.table_name}': {e}")
 
         
     def execute_query(self, query, params=None, fetchone=False, fetchall=False):
