@@ -138,5 +138,4 @@ def listen_for_messages():
 
 if __name__ == "__main__":
     print("----------------CONSUMER--------------------")
-    print(configure_database())
     listen_for_messages()
