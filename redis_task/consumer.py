@@ -93,7 +93,7 @@ def handle_delete_action(key):
     # SQL query to delete the employee record
     table_name = os.getenv('DB_TABLE_NAME')
     employee_id = key.split('/')[1]
-    query = "DELETE FROM %s WHERE emp_id=%s"
+    query = f"DELETE FROM {table_name} WHERE emp_id={employee_id}"
     params = (table_name, employee_id)
 
     # Execute the SQL query
