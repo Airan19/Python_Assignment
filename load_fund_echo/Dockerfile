@@ -9,3 +9,4 @@ COPY app.py .
 COPY logger.py .
 COPY db.py .
 COPY routes.py .
+COPY query.py .
