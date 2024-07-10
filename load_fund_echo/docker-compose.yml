@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+
+  producer:
+    container_name: flask-lfe
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -u app.py
+    env_file:
+      - ./env_variables
+    ports:
+      - "6020:6020"
